@@ -21,14 +21,7 @@ void gce_client::start(gce::stackful_actor base_actor)
 		boost::shared_ptr<tcp_resolver_t::iterator> eitr;
 		base_actor->match("init").recv(eitr);
 
-		//base_actor->recv("init");
-
-		//boost::asio::ip::address addr;
-		//addr.from_string("127.0.0.1");
-		//boost::shared_ptr<boost::asio::ip::tcp::endpoint> ep(new boost::asio::ip::tcp::endpoint(addr, 12345));
-
 		std::cout << (*eitr)->host_name() << "\t" << (*eitr)->service_name() << std::endl;
-		std::cout << (*eitr)->endpoint().address().to_string() << std::endl;
 
 		gce::asio::tcp::socket skt(base_actor);
 		skt.async_connect(*eitr);

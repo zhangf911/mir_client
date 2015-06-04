@@ -18,7 +18,7 @@ int main()
 		gce::context gce_context(attrs);
 		gce::threaded_actor client_base = gce::spawn(gce_context);
 
-		size_t cln_count = 100;
+		size_t cln_count = 1;
 		gce_client client;
 
 		gce::asio::tcp::resolver rsv(client_base);
@@ -27,9 +27,6 @@ int main()
 		boost::shared_ptr<tcp_resolver_t::iterator> eitr;
 		client_base->match(gce::asio::tcp::as_resolve).recv(ec, eitr);
 		GCE_VERIFY(!ec).except(ec);
-		//boost::asio::ip::address addr;
-		//addr.from_string("127.0.0.1");
-		//boost::shared_ptr<boost::asio::ip::tcp::endpoint> ep(new boost::asio::ip::tcp::endpoint(addr, 12345));
 
 		for (size_t i = 0; i < cln_count; ++i)
 		{
