@@ -1,4 +1,6 @@
 #include "client.h"
+#include "opcodes.pb.h"
+#include "mir_proto.adl.h"
 
 gce_client::gce_client()
 {
@@ -28,49 +30,60 @@ void gce_client::start(gce::stackful_actor base_actor)
 		base_actor->match(gce::asio::tcp::as_conn).recv(ec);
 		GCE_VERIFY(!ec).except(ec);
 
-		echo_header hdr;
-		size_t hdr_len = amsg::size_of(hdr);
-		amsg::zero_copy_buffer zbuf;
+		mir::msg_header hdr;
+		size_t hdr_len = adata::size_of(hdr);
+		
+		adata::zero_copy_buffer zbuf;
 
 		char buff[256];
 		std::string str("hello world!");
-		hdr.size_ = amsg::size_of(str);
+		msg_login login;
+		login.set_account("sky");
+
+		mir::echo_message echo_message;
+		echo_message.msg = login.SerializeAsString();
+
+		hdr.size = adata::size_of(echo_message);
+		hdr.type = 1;
 
 		zbuf.set_write(buff, 256);
-		amsg::write(zbuf, hdr);
-		amsg::write(zbuf, str);
+		adata::write(zbuf, hdr);
+		adata::write(zbuf, echo_message);
+
 
 		for (size_t i = 0; i < ecount; ++i)
 		{
-			skt.async_write(boost::asio::buffer(buff, hdr_len + hdr.size_));
+			skt.async_write(boost::asio::buffer(buff, hdr_len + hdr.size));
 			base_actor->match(gce::asio::tcp::as_send).recv(ec);
 			GCE_VERIFY(!ec).except(ec);
 
-			skt.async_read(hdr_len + hdr.size_);
-			gce::message::chunk ch(hdr_len + hdr.size_);
+			skt.async_read(hdr_len + hdr.size);
+			gce::message::chunk ch(hdr_len + hdr.size);
 			size_t bytes_transferred = 0;
 			base_actor->match(gce::asio::tcp::as_recv).recv(ec, ch, bytes_transferred);
 
-			zbuf.set_read(ch.data(), hdr_len + hdr.size_);
+			zbuf.set_read(ch.data(), hdr_len + hdr.size);
 			std::string echo_str;
-			amsg::read(zbuf, hdr);
-			amsg::read(zbuf, echo_str);
+			adata::read(zbuf, hdr);
+			mir::echo_message echo_message_back;
+			adata::read(zbuf, echo_message_back);
+			echo_str = echo_message_back.msg;
 			if (zbuf.bad())
 			{
 				break;
 			}
-			GCE_VERIFY(str == echo_str);
-
+			//GCE_VERIFY(str == echo_str);
+			login.ParseFromString(echo_str);
+			str = login.account();
 			std::cout << str << std::endl;
 		}
 
 		str.assign("bye");
-		hdr.size_ = amsg::size_of(str);
 
 		zbuf.set_write(buff, 256);
-		amsg::write(zbuf, hdr);
-		amsg::write(zbuf, str);
-		skt.async_write(boost::asio::buffer(buff, hdr_len + hdr.size_));
+		adata::write(zbuf, hdr);
+		adata::write(zbuf, str);
+		skt.async_write(boost::asio::buffer(buff, hdr_len + hdr.size));
 		base_actor->match(gce::asio::tcp::as_send).recv(ec);
 		GCE_VERIFY(!ec).except(ec);
 	}
